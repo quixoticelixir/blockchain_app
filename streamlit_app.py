@@ -163,7 +163,6 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
                 "period_avg_volume_out",
                 "period_unique_counterparties",
                 "period_active_days"
-                'date_difference_days'
             ]
 
             if all(col in st.session_state.original_data.columns for col in original_numeric_cols_for_stats):
