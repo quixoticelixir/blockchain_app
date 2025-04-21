@@ -1,17 +1,13 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
 
 def generate_eda_plots(data):
-    # Основная информация
     info = data.info()
 
-    # Статистика
     stats = data.describe()
 
-    # Гистограммы исходных данных
     numeric_cols = data.select_dtypes(include='number').columns.tolist()
     fig1, axes = plt.subplots(nrows=3, ncols=4, figsize=(20, 15))
     for i, col in enumerate(numeric_cols[:12]):
