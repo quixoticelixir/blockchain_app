@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
 from utils.preprocessing import load_data, preprocess_data
 from utils.clustering import find_optimal_clusters, perform_clustering
@@ -11,7 +10,6 @@ from utils.plots import (
 )
 from utils.eda import generate_eda_plots
 
-# Инициализация каждого атрибута отдельно
 for key, default in {
     'data_loaded': False,
     'cluster_performed': False,
@@ -31,8 +29,7 @@ st.set_page_config(
 
 st.title("Анализ кластеризации кошельков")
 
-# ----------------------------------------------------------------------------------
-# ШАГ 1: ЗАГРУЗКА ДАННЫХ
+# Загрузка данных
 st.markdown("### 1. Загрузка данных")
 uploaded_file = st.file_uploader("Выберите CSV файл", type=["csv"])
 
@@ -52,35 +49,28 @@ if uploaded_file is not None and not st.session_state.data_loaded:
             st.success("Данные успешно загружены!")
     except Exception as e:
         st.error(f"Ошибка при загрузке данных: {str(e)}")
-        # Сброс состояния в случае ошибки
         st.session_state.data_loaded = False
         st.session_state.original_data = None
 
-# ----------------------------------------------------------------------------------
-# ШАГ 2: ИССЛЕДОВАТЕЛЬСКИЙ АНАЛИЗ
+#  EDA
 if st.session_state.data_loaded and st.session_state.original_data is not None:
     st.markdown("### 2. Исследовательский анализ данных (EDA)")
     data = st.session_state.original_data
 
-    # Отображение первых строк
     st.subheader("Первые 5 строк данных")
     st.dataframe(data.head())
 
-    # Основная статистика
     st.subheader("Основная статистика")
     st.dataframe(data.describe())
 
-    # Графики распределения исходных данных
     st.subheader("Распределения исходных данных")
     eda_plots = generate_eda_plots(data)
     st.pyplot(eda_plots['original_plots'])
 
-    # Графики после логарифмирования
     st.subheader("Распределения после log1p-преобразования")
     st.pyplot(eda_plots['log_plots'])
 
-    # ----------------------------------------------------------------------------------
-    # ШАГ 3: ОПРЕДЕЛЕНИЕ ОПТИМАЛЬНОГО K
+    # Поиск оптимального количества кластеров
     st.markdown("### 3. Определение оптимального числа кластеров")
     max_k = st.slider("Максимальное k для анализа", 2, 20, 10)
 
@@ -96,7 +86,6 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
             st.error("Ошибка: данные не обработаны")
 
     if st.session_state.cluster_metrics:
-        # Графики метрик
         col1, col2 = st.columns(2)
         with col1:
             st.pyplot(plot_elbow_method(
@@ -149,8 +138,7 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
             else:
                 st.error("Ошибка: данные не обработаны")
 
-    # ----------------------------------------------------------------------------------
-    # ШАГ 4: РЕЗУЛЬТАТЫ КЛАСТЕРИЗАЦИИ
+    # Результаты кластеризаци
     if st.session_state.cluster_performed:
         st.markdown("### 4. Результаты кластеризации")
 
@@ -161,12 +149,9 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
             st.session_state.processed_data['cluster']
         ))
 
-        # Статистика по кластерам (по оригинальным данным с метками кластеров)
         st.subheader("Статистика по кластерам (по оригинальным данным)")
 
         if st.session_state.original_data is not None and 'cluster' in st.session_state.processed_data.columns:
-            # Определяем список оригинальных числовых колонок, по которым считаем статистику
-            # Эти колонки должны соответствовать тем, что использовались для кластеризации в preprocessing.py
             original_numeric_cols_for_stats = [
                 "current_link_balance",
                 "period_total_tx_count",
@@ -178,34 +163,21 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
                 "period_avg_volume_out",
                 "period_unique_counterparties",
                 "period_active_days"
-                # Добавляем date_difference_days, если он нужен в статистике
-                # 'date_difference_days'
+                'date_difference_days'
             ]
 
-            # Проверяем, что оригинальные данные содержат эти колонки
             if all(col in st.session_state.original_data.columns for col in original_numeric_cols_for_stats):
-
-                # Создаем временный датафрейм, объединяя оригинальные числовые колонки и метки кластеров
-                # Важно убедиться, что индексы совпадают (должны совпадать, т.к. обработка сохраняет порядок строк)
                 temp_df_for_stats = st.session_state.original_data[original_numeric_cols_for_stats].copy()
 
-                # Проверяем соответствие количества строк перед добавлением меток
                 if len(temp_df_for_stats) == len(st.session_state.processed_data):
                     temp_df_for_stats['cluster'] = st.session_state.processed_data[
-                        'cluster'].values  # Используем .values для надежности
+                        'cluster'].values
 
-                    # Рассчитываем статистику по кластерам на этом временном датафрейме
                     stats = temp_df_for_stats.groupby('cluster')[original_numeric_cols_for_stats].describe()
 
-                    # --- Код для удаления 'count' ---
-                    # Определяем список статистик, которые хотим оставить (все, кроме 'count')
                     stats_to_keep = ['mean', 'std', 'min', '25%', '50%', '75%', 'max']
-                    # Фильтруем DataFrame, оставляя только нужные строки статистики
-                    # Используем срезы (slice(None)) для выбора всех кластеров на первом уровне индекса
                     filtered_stats = stats.loc[:, (slice(None), stats_to_keep)]
-                    # --- Конец кода для удаления 'count' ---
 
-                    # Выводим отфильтрованную статистику
                     st.dataframe(filtered_stats)  # Выводим отфильтрованный DataFrame
 
                 else:
