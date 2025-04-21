@@ -9,6 +9,8 @@ from utils.plots import (
     plot_pca_clusters
 )
 from utils.eda import generate_eda_plots
+from utils.gigachat_api import get_ai_description_from_stats
+import requests
 
 for key, default in {
     'data_loaded': False,
@@ -16,7 +18,8 @@ for key, default in {
     'original_data': None,
     'processed_data': None,
     'scaled_features': None,
-    'cluster_metrics': None
+    'cluster_metrics': None,
+    'cluster_description': None
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -191,6 +194,50 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
         # Распределение по кластерам
         st.subheader("Распределение адресов по кластерам")
         st.bar_chart(st.session_state.processed_data['cluster'].value_counts())
+
+        st.markdown("### 5. Описание кластеров с помощью AI (GigaChat)")
+
+        if 'filtered_stats' in locals():  # Проверяем, что filtered_stats был создан в этом запуске скрипта
+            if st.button("Получить описание кластеров от GigaChat"):
+                # Получаем ГОТОВУЮ base64 строку авторизации из secrets
+                auth_basic_value = st.secrets.get('GIGACHAT_AUTH_BASIC_VALUE')
+
+                # Проверяем, что значение получено
+                if auth_basic_value:
+                    with st.spinner("Получение описания кластеров от GigaChat..."):
+                        description = None  # Переменная для результата
+                        try:
+                            # Форматируем статистику в текст для промпта
+                            stats_markdown_text = filtered_stats.to_markdown()
+
+                            # Вызываем НОВУЮ функцию, которая использует SDK
+                            description = get_ai_description_from_stats(auth_basic_value, stats_markdown_text)
+
+                            if description:
+                                st.session_state.cluster_description = description
+                                st.success("Описание получено!")
+                            else:
+                                # Если функция вернула None
+                                st.error(
+                                    "Не удалось получить текст описания от GigaChat через SDK (ответ пустой или неверный).")
+
+                        # Перехватываем исключения, которые может выбросить SDK или наша функция
+                        except Exception as e:
+                            st.error(f"Ошибка при вызове GigaChat SDK: {e}")
+                            # SDK может выбрасывать ошибки, которые содержат больше деталей
+                            # print(f"Ошибка SDK: {e.detail}" if hasattr(e, 'detail') else '') # Пример, зависит от SDK
+                            st.session_state.cluster_description = None  # Сбросить описание при ошибке
+
+
+                else:
+                    # Сообщение, если секрет отсутствует
+                    st.warning(
+                        "Для описания кластеров с помощью GigaChat необходимо добавить 'GIGACHAT_AUTH_BASIC_VALUE' (готовую base64 строку Client ID:Client Secret) в файл .streamlit/secrets.toml")
+
+        # Отображение полученного описания от AI
+        if st.session_state.cluster_description:
+            st.markdown("#### Описание кластеров:")
+            st.write(st.session_state.cluster_description)
 
         # Кнопка сброса
         if st.button("Сбросить анализ"):
