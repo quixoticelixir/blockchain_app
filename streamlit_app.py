@@ -121,6 +121,12 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
             - Silhouette Score: **{st.session_state.cluster_metrics['K_range'][np.argmax(st.session_state.cluster_metrics['silhouette'])]}**
             - Davies-Bouldin: **{st.session_state.cluster_metrics['K_range'][np.argmin(st.session_state.cluster_metrics['davies_bouldin'])]}**
         """)
+        st.markdown("""
+               **Примечание:** Это рекомендации, основанные на популярных метриках оценки кластеризации.
+               Оптимальное число кластеров (k) для финального анализа следует выбирать,
+               исходя из конкретных целей и особенностей данных вашей задачи (например,
+               требуемого уровня детализации или интерпретируемости кластеров).
+               """)
 
         # Выбор k пользователем
         selected_k = st.number_input(
@@ -155,12 +161,61 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
             st.session_state.processed_data['cluster']
         ))
 
-        # Статистика по кластерам
-        st.subheader("Статистика по кластерам")
-        numeric_cols = st.session_state.processed_data.select_dtypes(include=np.number).columns
-        stats = st.session_state.processed_data.groupby('cluster')[numeric_cols].describe()
-        st.dataframe(stats)
+        # Статистика по кластерам (по оригинальным данным с метками кластеров)
+        st.subheader("Статистика по кластерам (по оригинальным данным)")
 
+        if st.session_state.original_data is not None and 'cluster' in st.session_state.processed_data.columns:
+            # Определяем список оригинальных числовых колонок, по которым считаем статистику
+            # Эти колонки должны соответствовать тем, что использовались для кластеризации в preprocessing.py
+            original_numeric_cols_for_stats = [
+                "current_link_balance",
+                "period_total_tx_count",
+                "period_incoming_tx_count",
+                "period_outgoing_tx_count",
+                "period_total_volume_in",
+                "period_total_volume_out",
+                "period_avg_volume_in",
+                "period_avg_volume_out",
+                "period_unique_counterparties",
+                "period_active_days"
+                # Добавляем date_difference_days, если он нужен в статистике
+                # 'date_difference_days'
+            ]
+
+            # Проверяем, что оригинальные данные содержат эти колонки
+            if all(col in st.session_state.original_data.columns for col in original_numeric_cols_for_stats):
+
+                # Создаем временный датафрейм, объединяя оригинальные числовые колонки и метки кластеров
+                # Важно убедиться, что индексы совпадают (должны совпадать, т.к. обработка сохраняет порядок строк)
+                temp_df_for_stats = st.session_state.original_data[original_numeric_cols_for_stats].copy()
+
+                # Проверяем соответствие количества строк перед добавлением меток
+                if len(temp_df_for_stats) == len(st.session_state.processed_data):
+                    temp_df_for_stats['cluster'] = st.session_state.processed_data[
+                        'cluster'].values  # Используем .values для надежности
+
+                    # Рассчитываем статистику по кластерам на этом временном датафрейме
+                    stats = temp_df_for_stats.groupby('cluster')[original_numeric_cols_for_stats].describe()
+
+                    # --- Код для удаления 'count' ---
+                    # Определяем список статистик, которые хотим оставить (все, кроме 'count')
+                    stats_to_keep = ['mean', 'std', 'min', '25%', '50%', '75%', 'max']
+                    # Фильтруем DataFrame, оставляя только нужные строки статистики
+                    # Используем срезы (slice(None)) для выбора всех кластеров на первом уровне индекса
+                    filtered_stats = stats.loc[:, (slice(None), stats_to_keep)]
+                    # --- Конец кода для удаления 'count' ---
+
+                    # Выводим отфильтрованную статистику
+                    st.dataframe(filtered_stats)  # Выводим отфильтрованный DataFrame
+
+                else:
+                    st.error(
+                        "Ошибка: Не совпадает количество строк между оригинальными и обработанными данными. Невозможно рассчитать статистику по оригинальным данным.")
+
+            else:
+                st.error("Ошибка: Исходные данные не содержат всех необходимых колонок для расчета статистики.")
+        else:
+            st.info("Статистика по оригинальным данным будет доступна после завершения кластеризации.")
         # Распределение по кластерам
         st.subheader("Распределение адресов по кластерам")
         st.bar_chart(st.session_state.processed_data['cluster'].value_counts())
