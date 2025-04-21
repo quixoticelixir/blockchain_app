@@ -1,4 +1,3 @@
-# utils/plots.py (обновленный)
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.decomposition import PCA
