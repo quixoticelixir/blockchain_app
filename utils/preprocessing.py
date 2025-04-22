@@ -11,7 +11,7 @@ def load_data(file_path):
 
 def preprocess_data(data):
     selected_columns = [
-        "current_link_balance",
+        "current_token_balance",
         "period_total_tx_count",
         "period_incoming_tx_count",
         "period_outgoing_tx_count",
