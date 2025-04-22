@@ -425,8 +425,8 @@ if st.session_state.data_loaded and st.session_state.original_data is not None:
                             try:
                                 # Вызов функции API GigaChat
                                 description = get_ai_description_from_stats(
-                                    auth_token=auth_basic_value, # Используем корректный параметр
-                                    cluster_stats_markdown=stats_markdown_text
+                                    auth_basic_value=auth_basic_value,
+                                    stats_text=stats_markdown_text
                                 )
 
                                 if description:
