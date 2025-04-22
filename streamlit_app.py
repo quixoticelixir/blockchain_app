@@ -85,7 +85,6 @@ elif st.session_state.data_source == 'api':
     st.subheader("Параметры для сбора данных через API")
     etherscan_api_key = st.secrets.get("ETHERSCAN_API_KEY")
 
-    # --- Проверка наличия ключа ---
     if not etherscan_api_key:
         st.warning("""
             **Ключ API Etherscan не найден!**
