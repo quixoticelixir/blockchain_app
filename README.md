@@ -1,7 +1,3 @@
-Ethereum Wallet Clustering Dashboard
-
-Описание проекта
-
 Ethereum Wallet Clustering Dashboard — это веб-приложение на основе Streamlit для первичного анализа и кластеризации кошельков в сети Ethereum за последние 3 месяца на основе ончейн-данных. Приложение позволяет:
 
 * Собрать данные транзакций указанного ERC-20 токена через API Etherscan.
